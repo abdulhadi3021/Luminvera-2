@@ -1,5 +1,11 @@
 import React from 'react';
-import { Product } from '../types';
+import { useCart } from '../hooks/useCart';
+import { useAuth } from '../hooks/useAuth';
+import { Database } from '../types/database';
+
+type Product = Database['public']['Tables']['products']['Row'] & {
+  categories?: Database['public']['Tables']['categories']['Row'];
+};
 
 interface SearchResultsProps {
   results: Product[];
@@ -7,7 +13,18 @@ interface SearchResultsProps {
 }
 
 const SearchResults: React.FC<SearchResultsProps> = ({ results, query }) => {
+  const { user } = useAuth();
+  const { addToCart } = useCart();
+
   if (!query) return null;
+
+  const handleAddToCart = async (productId: string) => {
+    if (!user) {
+      alert('Please sign in to add items to cart');
+      return;
+    }
+    await addToCart(productId, 1);
+  };
 
   return (
     <div className="bg-white border-b border-gray-200 py-8">
@@ -30,7 +47,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ results, query }) => {
               >
                 <div className="aspect-square overflow-hidden">
                   <img
-                    src={product.image}
+                    src={product.image_url || ''}
                     alt={product.name}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                   />
@@ -38,7 +55,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ results, query }) => {
                 <div className="p-4">
                   <div className="mb-2">
                     <span className="text-xs text-gray-500 uppercase tracking-wider">
-                      {product.category}
+                      {product.categories?.name || product.subcategory}
                     </span>
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-primary-600 transition-colors line-clamp-2">
@@ -47,7 +64,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ results, query }) => {
                   <p className="text-gray-600 text-sm mb-3 line-clamp-2">
                     {product.description}
                   </p>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between mb-3">
                     <span className="text-xl font-bold text-primary-600">
                       ${product.price}
                     </span>
@@ -56,9 +73,18 @@ const SearchResults: React.FC<SearchResultsProps> = ({ results, query }) => {
                       <span className="text-sm text-gray-600">{product.rating}</span>
                     </div>
                   </div>
-                  <button className="w-full mt-4 bg-primary-500 hover:bg-primary-600 text-white py-2 px-4 rounded-lg font-medium transition-colors">
-                    Add to Cart
-                  </button>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">
+                      {product.stock_quantity} in stock
+                    </span>
+                    <button
+                      onClick={() => handleAddToCart(product.id)}
+                      disabled={!product.in_stock || product.stock_quantity === 0}
+                      className="bg-primary-500 hover:bg-primary-600 disabled:bg-gray-300 text-white py-2 px-4 rounded-lg font-medium transition-colors text-sm"
+                    >
+                      {product.in_stock && product.stock_quantity > 0 ? 'Add to Cart' : 'Out of Stock'}
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

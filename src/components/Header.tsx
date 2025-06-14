@@ -1,13 +1,21 @@
 import React, { useState } from 'react';
-import { Search, Menu, X, User, ShoppingBag } from 'lucide-react';
+import { Search, Menu, X, User, ShoppingBag, LogOut } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
+import { useCart } from '../hooks/useCart';
 
 interface HeaderProps {
   onSearch: (query: string) => void;
+  onAuthRequired: (mode?: 'signin' | 'signup') => void;
+  onCartOpen: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onSearch }) => {
+const Header: React.FC<HeaderProps> = ({ onSearch, onAuthRequired, onCartOpen }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+
+  const { user, signOut } = useAuth();
+  const { cartCount } = useCart();
 
   const navigationItems = [
     'Home',
@@ -32,6 +40,11 @@ const Header: React.FC<HeaderProps> = ({ onSearch }) => {
     onSearch(searchQuery);
   };
 
+  const handleSignOut = async () => {
+    await signOut();
+    setIsUserMenuOpen(false);
+  };
+
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
       {/* Top bar */}
@@ -40,13 +53,45 @@ const Header: React.FC<HeaderProps> = ({ onSearch }) => {
           <div className="flex justify-between items-center text-sm text-gray-600">
             <span>Free shipping on orders over $50</span>
             <div className="flex items-center space-x-4">
-              <button className="hover:text-primary-600 transition-colors">
-                Sign In
-              </button>
-              <span>|</span>
-              <button className="hover:text-primary-600 transition-colors">
-                Create Account
-              </button>
+              {user ? (
+                <div className="relative">
+                  <button
+                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                    className="flex items-center space-x-2 hover:text-primary-600 transition-colors"
+                  >
+                    <User className="h-4 w-4" />
+                    <span>Hi, {user.user_metadata?.full_name || user.email}</span>
+                  </button>
+                  
+                  {isUserMenuOpen && (
+                    <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-10">
+                      <button
+                        onClick={handleSignOut}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        <span>Sign Out</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <button 
+                    onClick={() => onAuthRequired('signin')}
+                    className="hover:text-primary-600 transition-colors"
+                  >
+                    Sign In
+                  </button>
+                  <span>|</span>
+                  <button 
+                    onClick={() => onAuthRequired('signup')}
+                    className="hover:text-primary-600 transition-colors"
+                  >
+                    Create Account
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -87,14 +132,24 @@ const Header: React.FC<HeaderProps> = ({ onSearch }) => {
               Home
             </a>
             <div className="flex items-center space-x-6">
-              <button className="text-gray-700 hover:text-primary-600 transition-colors">
-                <User className="h-5 w-5" />
-              </button>
-              <button className="text-gray-700 hover:text-primary-600 transition-colors relative">
+              {user && (
+                <button 
+                  onClick={() => onAuthRequired('signin')}
+                  className="text-gray-700 hover:text-primary-600 transition-colors"
+                >
+                  <User className="h-5 w-5" />
+                </button>
+              )}
+              <button 
+                onClick={onCartOpen}
+                className="text-gray-700 hover:text-primary-600 transition-colors relative"
+              >
                 <ShoppingBag className="h-5 w-5" />
-                <span className="absolute -top-2 -right-2 bg-primary-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  3
-                </span>
+                {cartCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-primary-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {cartCount}
+                  </span>
+                )}
               </button>
             </div>
           </nav>
@@ -159,13 +214,29 @@ const Header: React.FC<HeaderProps> = ({ onSearch }) => {
               </button>
             ))}
             <div className="border-t pt-3 mt-4">
-              <button className="flex items-center space-x-2 text-gray-700 hover:text-primary-600 transition-colors py-2">
-                <User className="h-5 w-5" />
-                <span>Sign In</span>
-              </button>
-              <button className="flex items-center space-x-2 text-gray-700 hover:text-primary-600 transition-colors py-2">
+              {user ? (
+                <button 
+                  onClick={handleSignOut}
+                  className="flex items-center space-x-2 text-gray-700 hover:text-primary-600 transition-colors py-2"
+                >
+                  <LogOut className="h-5 w-5" />
+                  <span>Sign Out</span>
+                </button>
+              ) : (
+                <button 
+                  onClick={() => onAuthRequired('signin')}
+                  className="flex items-center space-x-2 text-gray-700 hover:text-primary-600 transition-colors py-2"
+                >
+                  <User className="h-5 w-5" />
+                  <span>Sign In</span>
+                </button>
+              )}
+              <button 
+                onClick={onCartOpen}
+                className="flex items-center space-x-2 text-gray-700 hover:text-primary-600 transition-colors py-2"
+              >
                 <ShoppingBag className="h-5 w-5" />
-                <span>Cart (3)</span>
+                <span>Cart ({cartCount})</span>
               </button>
             </div>
           </div>
